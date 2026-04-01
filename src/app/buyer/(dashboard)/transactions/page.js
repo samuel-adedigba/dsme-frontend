@@ -3,39 +3,70 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Clock, Package } from "lucide-react";
+import { ArrowRight, Clock, Package, Shield } from "lucide-react";
 import { transactionAPI } from "@/lib/api";
 import { StatusBadge, Spinner, EmptyState } from "@/components/ui";
 
 export default function BuyerTransactions() {
   const [transactions, setTransactions] = useState([]);
-  const [pending, setPending] = useState([]);
+  const [awaiting, setAwaiting] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([transactionAPI.getAll(), transactionAPI.getPending()])
       .then(([allRes, pendingRes]) => {
         setTransactions(allRes.data.data || []);
-        setPending(pendingRes.data.data || []);
+        setAwaiting(pendingRes.data.data || []);
       })
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="flex justify-center py-20"><Spinner size={32} /></div>;
 
+  // Separate transactions awaiting seller acceptance from those awaiting buyer action
+  const awaitingSellerStake = awaiting.filter((t) => t.status === "AWAITING_SELLER_STAKE");
+  const awaitingBuyerStake = awaiting.filter((t) => t.status === "AWAITING_BUYER_STAKE");
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <h1 className="text-xl font-bold text-gray-900">My Transactions</h1>
 
-      {/* Pending invitations */}
-      {pending.length > 0 && (
-        <div className="card p-5 border-orange-200 bg-orange-50">
-          <h3 className="font-semibold text-sm text-orange-800 mb-3 flex items-center gap-2">
+      {/* Awaiting seller acceptance */}
+      {awaitingSellerStake.length > 0 && (
+        <div className="card p-5 border-blue-200 bg-blue-50">
+          <h3 className="font-semibold text-sm text-blue-800 mb-3 flex items-center gap-2">
             <Clock size={15} />
-            Pending Invitations ({pending.length})
+            Awaiting Seller Acceptance ({awaitingSellerStake.length})
           </h3>
           <div className="space-y-2">
-            {pending.map((tx) => (
+            {awaitingSellerStake.map((tx) => (
+              <Link
+                key={tx.id}
+                href={`/buyer/transactions/${tx.id}`}
+                className="flex items-center justify-between bg-white rounded-lg p-3 hover:bg-blue-50 transition"
+              >
+                <div>
+                  <p className="font-medium text-sm text-gray-900">{tx.item_name || tx.itemName}</p>
+                  <p className="text-xs text-gray-500">
+                    from {tx.seller?.fullName || tx.seller_name} · ₦{((Number(tx.buyer_total_kobo || tx.buyerTotalKobo)) / 100).toLocaleString()}
+                  </p>
+                </div>
+                <ArrowRight size={16} className="text-blue-500" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Ready to activate (seller accepted) */}
+      {awaitingBuyerStake.length > 0 && (
+        <div className="card p-5 border-orange-200 bg-orange-50">
+          <h3 className="font-semibold text-sm text-orange-800 mb-3 flex items-center gap-2">
+            <Shield size={15} />
+            Ready to Activate ({awaitingBuyerStake.length})
+          </h3>
+          <div className="space-y-2">
+            {awaitingBuyerStake.map((tx) => (
               <Link
                 key={tx.id}
                 href={`/buyer/transactions/${tx.id}`}
@@ -44,7 +75,7 @@ export default function BuyerTransactions() {
                 <div>
                   <p className="font-medium text-sm text-gray-900">{tx.item_name || tx.itemName}</p>
                   <p className="text-xs text-gray-500">
-                    from {tx.seller?.fullName || tx.seller_name} · ₦{((Number(tx.buyer_total_kobo || tx.buyerTotalKobo)) / 100).toLocaleString()} to stake
+                    from {tx.seller?.fullName || tx.seller_name} · Lock ₦{((Number(tx.buyer_total_kobo || tx.buyerTotalKobo)) / 100).toLocaleString()}
                   </p>
                 </div>
                 <ArrowRight size={16} className="text-orange-500" />

@@ -22,7 +22,7 @@ export default function BuyerShop() {
   const [milestones, setMilestones] = useState(getMilestonesForCount(DEFAULT_MILESTONE_COUNT));
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
-  const { user } = useApp();
+  const { user, resolveSellerForProduct } = useApp();
   const router = useRouter();
 
   const filtered = useMemo(() =>
@@ -56,6 +56,11 @@ export default function BuyerShop() {
 
   const handleInitiate = async () => {
     if (!escrowModal) return;
+    const resolvedSeller = resolveSellerForProduct(escrowModal);
+    if (!resolvedSeller.id) {
+      setMsg("This seller is not linked yet. Please try another product.");
+      return;
+    }
     if (totalPercentage !== 100) {
       setMsg("Milestone percentages must sum to 100%.");
       return;
@@ -78,7 +83,7 @@ export default function BuyerShop() {
         item_name: escrowModal.name,
         item_description: escrowModal.description,
         price_kobo: escrowModal.priceKobo,
-        buyer_email: user.email,
+        seller_id: resolvedSeller.id,
         caution_rate: 0.05,
         milestones: milestones.map((milestone, index) => ({
           description: milestone.description.trim(),
@@ -125,7 +130,7 @@ export default function BuyerShop() {
         ))}
       </div>
 
-      <Modal open={!!escrowModal} onClose={() => setEscrowModal(null)} title="Start Escrow Transaction" maxWidth="max-w-md">
+      <Modal open={!!escrowModal} onClose={() => setEscrowModal(null)} title="Initiate Escrow Transaction" maxWidth="max-w-md">
         {escrowModal && (
           <div className="space-y-4">
             <div className="flex gap-3 p-3 bg-orange-50 rounded-lg">
@@ -135,6 +140,13 @@ export default function BuyerShop() {
                 <p className="text-xs text-gray-500">{escrowModal.seller}</p>
                 <p className="font-bold text-orange-600 mt-1">₦{(escrowModal.priceKobo / 100).toLocaleString()}</p>
               </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+              <p className="text-xs font-medium text-blue-900">Transaction with Seller</p>
+              <p className="text-xs text-blue-700">
+                You're initiating an escrow with <strong>{escrowModal.seller}</strong>. They will be notified and must accept by staking their caution fee before the transaction activates.
+              </p>
             </div>
 
             <div className="border border-gray-100 rounded-lg divide-y divide-gray-100 text-sm">
@@ -150,7 +162,7 @@ export default function BuyerShop() {
             </div>
 
             <p className="text-xs text-blue-700 bg-blue-50 rounded-lg p-3">
-              Top up your wallet first, then confirm to lock funds. You approve each milestone before the seller is paid.
+              You'll send funds escrow. The seller must stake their caution fee to activate. Once active, you approve each milestone before payment is released.
             </p>
 
             <div className="border border-gray-100 rounded-lg p-3 space-y-3">

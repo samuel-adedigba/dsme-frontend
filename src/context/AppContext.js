@@ -4,7 +4,7 @@
 // Wrap the app in AppProvider to access useApp() hook anywhere.
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { authAPI } from "@/lib/api";
+import { authAPI, publicAPI } from "@/lib/api";
 import { Toast } from "@/components/ui/index";
 
 const AppContext = createContext(null);
@@ -17,6 +17,50 @@ export function AppProvider({ children }) {
   const [wishlist, setWishlist] = useState([]); // [product]
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState({ message: "", type: "info" });
+  const [sellerDirectory, setSellerDirectory] = useState({
+    list: [],
+    byEmail: {},
+    loading: false,
+    loaded: false,
+  });
+
+  const indexSellersByEmail = useCallback((sellers) => {
+    return sellers.reduce((acc, seller) => {
+      const email = seller?.email?.toLowerCase?.();
+      if (!email) return acc;
+      acc[email] = seller;
+      return acc;
+    }, {});
+  }, []);
+
+  const refreshSellers = useCallback(async () => {
+    setSellerDirectory((prev) => ({ ...prev, loading: true }));
+    try {
+      const res = await publicAPI.getSellers();
+      const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+      setSellerDirectory({
+        list,
+        byEmail: indexSellersByEmail(list),
+        loading: false,
+        loaded: true,
+      });
+    } catch {
+      setSellerDirectory((prev) => ({ ...prev, loading: false, loaded: true }));
+    }
+  }, [indexSellersByEmail]);
+
+  const resolveSellerForProduct = useCallback(
+    (product) => {
+      const email = product?.sellerEmail?.toLowerCase?.();
+      const fromDirectory = email ? sellerDirectory.byEmail[email] : null;
+      return {
+        id: fromDirectory?.id || product?.sellerId || null,
+        email: fromDirectory?.email || product?.sellerEmail || null,
+        name: fromDirectory?.name || product?.seller || null,
+      };
+    },
+    [sellerDirectory.byEmail]
+  );
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -64,6 +108,10 @@ export function AppProvider({ children }) {
     }, 4000);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    refreshSellers();
+  }, [refreshSellers]);
 
   // ── AUTH ────────────────────────────────────────────────────────────────────
   const login = useCallback((userData, jwtToken) => {
@@ -138,6 +186,11 @@ export function AppProvider({ children }) {
           login, logout,
           cart, addToCart, removeFromCart, clearCart, cartCount, cartTotal,
           wishlist, toggleWishlist, isWishlisted, moveToCart,
+          sellers: sellerDirectory.list,
+          sellersLoading: sellerDirectory.loading,
+          sellersLoaded: sellerDirectory.loaded,
+          refreshSellers,
+          resolveSellerForProduct,
         }}
       >
         {children}

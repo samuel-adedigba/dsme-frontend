@@ -59,6 +59,11 @@ api.interceptors.response.use(
 
 export default api;
 
+// ── PUBLIC ────────────────────────────────────────────────────────────────────
+export const publicAPI = {
+  getSellers: () => api.get("/public/sellers"),
+};
+
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 export const authAPI = {
   register: (data) => api.post("/auth/register", data),

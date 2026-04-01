@@ -11,10 +11,12 @@ import clsx from "clsx";
 import { Toast } from "@/components/ui/index";
 
 export default function ProductCard({ product, onBuyEscrow }) {
-  const { addToCart, toggleWishlist, isWishlisted, user } = useApp();
+  const { addToCart, toggleWishlist, isWishlisted, user, resolveSellerForProduct } = useApp();
   const router = useRouter();
   const wishlisted = isWishlisted(product.id);
   const isEscrow = !!product.sellerEmail;
+  const resolvedSeller = resolveSellerForProduct?.(product);
+  const sellerLabel = resolvedSeller?.name || resolvedSeller?.email || product.seller;
   const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
@@ -69,7 +71,7 @@ export default function ProductCard({ product, onBuyEscrow }) {
 
         {/* Info */}
         <div className="p-3">
-          <p className="text-[11px] text-gray-400 mb-0.5">{product.seller}</p>
+          <p className="text-[11px] text-gray-400 mb-0.5">{sellerLabel}</p>
           <h3 className="font-medium text-gray-900 text-sm leading-tight line-clamp-2 mb-1">
             {product.name}
           </h3>

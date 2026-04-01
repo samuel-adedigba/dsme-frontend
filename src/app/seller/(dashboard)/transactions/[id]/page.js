@@ -39,7 +39,7 @@ export default function SellerTransactionDetail() {
     setMsg({ text: "", type: "" });
     try {
       await transactionAPI.stakeSeller(id);
-      setMsg({ text: "Caution fee staked. Transaction is now active. You may begin work.", type: "success" });
+      setMsg({ text: "Caution fee staked successfully! Buyer will now receive a notification to lock their funds. Status will update once they stake.", type: "success" });
       load();
     } catch (err) {
       setMsg({ text: err.response?.data?.message || "Staking failed.", type: "error" });
@@ -122,17 +122,30 @@ export default function SellerTransactionDetail() {
       {/* Stake action */}
       {tx.status === "AWAITING_SELLER_STAKE" && (
         <div className="card p-5 border-orange-200">
-          <h3 className="font-semibold text-sm text-orange-800 mb-2">Action Required: Stake Caution Fee</h3>
+          <h3 className="font-semibold text-sm text-orange-800 mb-2">Action Required: Accept & Stake Caution Fee</h3>
           <p className="text-xs text-gray-500 mb-3">
-            The buyer has staked their funds. Deposit your caution fee (₦{(stakeAmt / 100).toLocaleString()}) to activate the transaction.
+            <strong>{tx.buyer_name || tx.buyer?.fullName}</strong> is ready and waiting. Stake your caution fee (₦{(stakeAmt / 100).toLocaleString()}) to accept this transaction.
           </p>
           <div className={`rounded-lg p-3 mb-3 text-sm ${hasEnough ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
             Wallet balance: <strong>₦{(available / 100).toLocaleString()}</strong>
             {!hasEnough && `  need ₦${((stakeAmt - available) / 100).toLocaleString()} more`}
           </div>
           <Button className="w-full" loading={staking} disabled={!hasEnough} onClick={handleStake}>
-            {hasEnough ? `Stake ₦${(stakeAmt / 100).toLocaleString()}` : "Top up wallet first"}
+            {hasEnough ? `Accept & Stake ₦${(stakeAmt / 100).toLocaleString()}` : "Top up wallet first"}
           </Button>
+        </div>
+      )}
+
+      {/* AWAITING BUYER STAKE  seller already staked */}
+      {tx.status === "AWAITING_BUYER_STAKE" && (
+        <div className="card p-5 border-blue-200 bg-blue-50">
+          <h3 className="font-semibold text-sm text-blue-800 mb-2 flex items-center gap-2">
+            <Clock size={15} className="text-blue-500" />
+            Waiting for Buyer to Activate
+          </h3>
+          <p className="text-xs text-blue-700">
+            You've staked your caution fee. <strong>{tx.buyer_name || tx.buyer?.fullName}</strong> will now receive a notification to lock their funds. The transaction will activate once they stake.
+          </p>
         </div>
       )}
 

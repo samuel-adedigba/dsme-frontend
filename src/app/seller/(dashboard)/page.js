@@ -27,7 +27,10 @@ export default function SellerOverview() {
 
   const available = Number(wallet?.availableBalanceKobo || wallet?.available_balance_kobo || 0);
   const locked    = Number(wallet?.lockedBalanceKobo    || wallet?.locked_balance_kobo    || 0);
-  const active    = transactions.filter((t) => ["STAKED", "AWAITING_APPROVAL", "MILESTONE_APPROVED", "AWAITING_SELLER_STAKE"].includes(t.status));
+  
+  // Separate pending invitations from active transactions
+  const pending   = transactions.filter((t) => t.status === "AWAITING_SELLER_STAKE");
+  const active    = transactions.filter((t) => ["STAKED", "AWAITING_APPROVAL", "MILESTONE_APPROVED"].includes(t.status));
   const completed = transactions.filter((t) => t.status === "COMPLETED");
   const disputed  = transactions.filter((t) => t.status === "DISPUTED");
 
@@ -47,7 +50,7 @@ export default function SellerOverview() {
         {[
           { label: "Available", value: `₦${(available / 100).toLocaleString()}`, icon: <Wallet size={18} className="text-green-500" />, color: "text-green-600" },
           { label: "Locked", value: `₦${(locked / 100).toLocaleString()}`, icon: <Package size={18} className="text-yellow-500" />, color: "text-yellow-600" },
-          { label: "Active", value: active.length, icon: <CheckCircle size={18} className="text-blue-500" />, color: "text-blue-600" },
+          { label: "Pending", value: pending.length, icon: <AlertTriangle size={18} className="text-orange-500" />, color: "text-orange-600" },
           { label: "Disputed", value: disputed.length, icon: <AlertTriangle size={18} className="text-red-400" />, color: "text-red-500" },
         ].map((s) => (
           <div key={s.label} className="card p-4">
@@ -56,6 +59,33 @@ export default function SellerOverview() {
           </div>
         ))}
       </div>
+
+      {/* Pending invitations */}
+      {pending.length > 0 && (
+        <div className="card p-5 border-orange-200 bg-orange-50">
+          <h3 className="font-semibold text-sm text-orange-800 mb-3 flex items-center gap-2">
+            <AlertTriangle size={15} />
+            Buyer Invitations: Accept Required ({pending.length})
+          </h3>
+          <div className="space-y-2">
+            {pending.map((tx) => (
+              <Link
+                key={tx.id}
+                href={`/seller/transactions/${tx.id}`}
+                className="flex items-center justify-between bg-white rounded-lg p-3 hover:bg-orange-50 transition group"
+              >
+                <div>
+                  <p className="font-medium text-sm text-gray-900">{tx.item_name || tx.itemName}</p>
+                  <p className="text-xs text-gray-500">
+                    from {tx.buyer?.fullName || tx.buyer_name} · Stake ₦{((Number(tx.seller_stake_kobo || tx.sellerStakeKobo)) / 100).toLocaleString()}
+                  </p>
+                </div>
+                <ArrowRight size={16} className="text-orange-500 group-hover:translate-x-0.5 transition" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* My listings */}
       {myProducts.length > 0 && (

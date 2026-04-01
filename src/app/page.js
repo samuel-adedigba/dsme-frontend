@@ -25,7 +25,7 @@ function StoreFront() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
   const router = useRouter();
-  const { user } = useApp();
+  const { user, resolveSellerForProduct } = useApp();
 
   const searchParams = useSearchParams();
   const searchQuery = searchParams?.get("search") || "";
@@ -70,6 +70,11 @@ function StoreFront() {
 
   const handleInitiateTransaction = async () => {
     if (!escrowModal) return;
+    const resolvedSeller = resolveSellerForProduct(escrowModal);
+    if (!resolvedSeller.id) {
+      setToast("This seller is not linked yet. Please try another product.");
+      return;
+    }
     if (totalPercentage !== 100) {
       setToast("Milestone percentages must sum to 100%.");
       return;
@@ -91,7 +96,7 @@ function StoreFront() {
         item_name: escrowModal.name,
         item_description: escrowModal.description,
         price_kobo: escrowModal.priceKobo,
-        buyer_email: user.email,
+        seller_id: resolvedSeller.id,
         caution_rate: 0.05,
         milestones: milestones.map((milestone, index) => ({
           description: milestone.description.trim(),

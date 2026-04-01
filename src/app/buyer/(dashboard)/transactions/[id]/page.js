@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircle, XCircle, AlertTriangle, Shield, Copy, ArrowLeft, Upload } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Shield, Copy, ArrowLeft, Upload, Clock } from "lucide-react";
 import { transactionAPI, milestoneAPI, walletAPI } from "@/lib/api";
 import { StatusBadge, Button, Spinner, Modal, Input } from "@/components/ui";
 
@@ -48,7 +48,7 @@ export default function BuyerTransactionDetail() {
     setMsg({ text: "", type: "" });
     try {
       await transactionAPI.stakeBuyer(id);
-      setMsg({ text: "Funds staked! Waiting for seller to deposit their caution fee.", type: "success" });
+      setMsg({ text: "Funds staked successfully! Transaction is now active. Begin working on the first milestone.", type: "success" });
       load();
     } catch (err) {
       setMsg({ text: err.response?.data?.message || "Staking failed.", type: "error" });
@@ -103,6 +103,7 @@ export default function BuyerTransactionDetail() {
   const hasEnough  = available >= totalStake;
   const currentMilestoneIdx = tx.current_milestone_index ?? tx.currentMilestoneIndex ?? 0;
   const activeMilestone = milestones.find((m) => (m.order_index ?? m.orderIndex) === currentMilestoneIdx);
+  const isAwaitingSellerStake = tx.status === "AWAITING_SELLER_STAKE";
   const isAwaitingBuyerStake  = tx.status === "AWAITING_BUYER_STAKE";
   const isAwaitingApproval    = tx.status === "AWAITING_APPROVAL";
 
@@ -149,13 +150,33 @@ export default function BuyerTransactionDetail() {
         </div>
       </div>
 
+      {/* AWAITING SELLER ACCEPTANCE  shown initially */}
+      {isAwaitingSellerStake && (
+        <div className="card p-5 border-blue-200 bg-blue-50">
+          <h3 className="font-semibold text-sm text-blue-800 mb-2 flex items-center gap-2">
+            <Clock size={15} className="text-blue-500" />
+            Awaiting Seller Acceptance
+          </h3>
+          <p className="text-xs text-blue-700 mb-3">
+            <strong>{tx.seller_name || tx.seller?.fullName}</strong> has been notified and must stake their caution fee to accept this transaction. This usually takes a few minutes.
+          </p>
+          <div className="text-xs text-blue-600 bg-white rounded p-2 border border-blue-100">
+            Once the seller accepts, you'll be prompted to lock your funds for the escrow.
+          </div>
+        </div>
+      )}
+
       {/* STAKE ACTION  shown when awaiting buyer */}
       {isAwaitingBuyerStake && (
         <div className="card p-5 border-orange-200">
           <h3 className="font-semibold text-sm text-orange-800 mb-3 flex items-center gap-2">
             <Shield size={15} className="text-orange-500" />
-            Action Required: Stake Your Funds
+            Ready to Activate: Stake Your Funds
           </h3>
+
+          <p className="text-xs text-orange-700 mb-3">
+            <strong>{tx.seller_name || tx.seller?.fullName}</strong> has accepted! Now lock your funds to activate the transaction.
+          </p>
 
           {/* Wallet balance */}
           <div className={`rounded-lg p-3 mb-3 text-sm ${hasEnough ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>

@@ -15,11 +15,20 @@ export const CATEGORIES = [
 ];
 
 // IMPORTANT: Register these seller accounts on your backend first, then
-// update sellerEmail to match. The system will use these to route transactions.
+// update sellerEmail and sellerId to match. The system will use sellerId to route transactions.
 export const LINKED_SELLERS = {
-  SELLER_A: "seller@mailinator.com",   // Fashion seller
-  SELLER_B: "seller1@mailinator.com", // Electronics seller
-  SELLER_C: "fatima@dsme.test",    // Footwear seller
+  SELLER_A: {
+    id: "550e8400-e29b-41d4-a716-446655440001",
+    email: "seller@mailinator.com",
+  },
+  SELLER_B: {
+    id: "550e8400-e29b-41d4-a716-446655440002",
+    email: "seller1@mailinator.com",
+  },
+  SELLER_C: {
+    id: "550e8400-e29b-41d4-a716-446655440003",
+    email: "fatima@dsme.test",
+  },
 };
 
 export const products = [
@@ -32,7 +41,8 @@ export const products = [
     priceKobo: 4500000,     // Kobo for DSME transactions
     image: "https://images.unsplash.com/photo-1594938298603-c8148c4b4057?w=400&q=80",
     seller: "Adunola Couture",
-    sellerEmail: LINKED_SELLERS.SELLER_A,  // DSME-linked item
+    sellerEmail: LINKED_SELLERS.SELLER_A.email,
+    sellerId: LINKED_SELLERS.SELLER_A.id,
     rating: 4.8,
     reviews: 24,
     badge: "Escrow Protected",
@@ -46,7 +56,8 @@ export const products = [
     priceKobo: 2800000,
     image: "https://images.unsplash.com/photo-1589810635657-232948472d98?w=400&q=80",
     seller: "Adunola Couture",
-    sellerEmail: LINKED_SELLERS.SELLER_A,
+    sellerEmail: LINKED_SELLERS.SELLER_A.email,
+    sellerId: LINKED_SELLERS.SELLER_A.id,
     rating: 4.6,
     reviews: 18,
     badge: "Escrow Protected",
@@ -86,7 +97,8 @@ export const products = [
     priceKobo: 32000000,
     image: "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=400&q=80",
     seller: "TechHub Lagos",
-    sellerEmail: LINKED_SELLERS.SELLER_B,
+    sellerEmail: LINKED_SELLERS.SELLER_B.email,
+    sellerId: LINKED_SELLERS.SELLER_B.id,
     rating: 4.7,
     reviews: 56,
     badge: "Escrow Protected",
@@ -100,7 +112,8 @@ export const products = [
     priceKobo: 17500000,
     image: "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=400&q=80",
     seller: "TechHub Lagos",
-    sellerEmail: LINKED_SELLERS.SELLER_B,
+    sellerEmail: LINKED_SELLERS.SELLER_B.email,
+    sellerId: LINKED_SELLERS.SELLER_B.id,
     rating: 4.9,
     reviews: 89,
     badge: "Escrow Protected",
@@ -140,7 +153,8 @@ export const products = [
     priceKobo: 3500000,
     image: "https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=400&q=80",
     seller: "Fatima Footworks",
-    sellerEmail: LINKED_SELLERS.SELLER_C,
+    sellerEmail: LINKED_SELLERS.SELLER_C.email,
+    sellerId: LINKED_SELLERS.SELLER_C.id,
     rating: 4.8,
     reviews: 15,
     badge: "Escrow Protected",
@@ -154,7 +168,8 @@ export const products = [
     priceKobo: 2750000,
     image: "https://images.unsplash.com/photo-1515347619252-60a4bf4fff4f?w=400&q=80",
     seller: "Fatima Footworks",
-    sellerEmail: LINKED_SELLERS.SELLER_C,
+    sellerEmail: LINKED_SELLERS.SELLER_C.email,
+    sellerId: LINKED_SELLERS.SELLER_C.id,
     rating: 4.7,
     reviews: 22,
     badge: "Escrow Protected",
