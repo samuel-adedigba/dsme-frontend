@@ -2,7 +2,7 @@
 // Seeded product catalog for the DSME storefront.
 // Items with `sellerEmail` are linked to real seller accounts on the backend.
 // Those items show "Buy via Escrow" and trigger the full DSME transaction flow.
-// Items without `sellerEmail` are decorative — add to cart/wishlist only.
+// Items without `sellerEmail` are decorative  add to cart/wishlist only.
 
 export const CATEGORIES = [
   "All",
@@ -28,7 +28,7 @@ export const products = [
     id: "p001",
     name: "Custom Ankara 3-Piece Set",
     category: "Fashion",
-    price: 45000,           // NGN — displayed as ₦45,000
+    price: 45000,           // NGN  displayed as ₦45,000
     priceKobo: 4500000,     // Kobo for DSME transactions
     image: "https://images.unsplash.com/photo-1594938298603-c8148c4b4057?w=400&q=80",
     seller: "Adunola Couture",

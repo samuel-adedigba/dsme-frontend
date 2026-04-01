@@ -148,7 +148,7 @@ export default function WalletPage() {
                       {entry.type?.replace(/_/g, " ")}
                     </span>
                     <p className="text-xs text-gray-500 hidden sm:block truncate max-w-[180px]">
-                      {entry.description || entry.transaction?.itemName || entry.transaction?.item_name || "—"}
+                      {entry.description || entry.transaction?.itemName || entry.transaction?.item_name || ""}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">

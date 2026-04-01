@@ -60,6 +60,25 @@ export default function AdminDisputes() {
           {disputes.map((d) => {
             const price      = Number(d.price_kobo || d.priceKobo || 0);
             const cautionFee = Number(d.caution_fee_kobo || d.cautionFeeKobo || 0);
+            const latestDispute = Array.isArray(d.disputes) && d.disputes.length > 0
+              ? [...d.disputes].sort(
+                  (a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0)
+                )[0]
+              : null;
+            const disputedStep =
+              latestDispute?.milestone?.description ||
+              d.disputed_milestone ||
+              d.disputedMilestone ||
+              "Not specified";
+            const buyerReason =
+              latestDispute?.reason ||
+              d.reason ||
+              "No buyer reason was provided.";
+            const zohoTicket =
+              latestDispute?.zohoTicketId ||
+              latestDispute?.zoho_ticket_id ||
+              d.zoho_ticket_id ||
+              d.zohoTicketId;
             return (
               <div key={d.id} className="card p-5 border-red-100">
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -80,7 +99,7 @@ export default function AdminDisputes() {
                   {[
                     ["Item Price", `₦${(price / 100).toLocaleString()}`],
                     ["Caution Fee (each)", `₦${(cautionFee / 100).toLocaleString()}`],
-                    ["Disputed Step", d.disputed_milestone || d.disputedMilestone || "—"],
+                    ["Disputed Step", disputedStep],
                   ].map(([k, v]) => (
                     <div key={k} className="bg-gray-50 rounded-lg p-2">
                       <p className="text-gray-400">{k}</p>
@@ -91,10 +110,10 @@ export default function AdminDisputes() {
 
                 <div className="bg-red-50 rounded-lg p-3 text-xs">
                   <p className="font-medium text-red-700 mb-1">Buyer&apos;s Reason:</p>
-                  <p className="text-red-600">{d.reason}</p>
+                  <p className="text-red-600">{buyerReason}</p>
                 </div>
 
-                {(d.zoho_ticket_id || d.zohoTicketId) && (
+                {zohoTicket && (
                   <a
                     href={`https://crm.zoho.com`}
                     target="_blank"
@@ -102,7 +121,7 @@ export default function AdminDisputes() {
                     className="mt-2 inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
                   >
                     <ExternalLink size={11} />
-                    Zoho Ticket: {d.zoho_ticket_id || d.zohoTicketId}
+                    Zoho Ticket: {zohoTicket}
                   </a>
                 )}
               </div>
@@ -120,8 +139,8 @@ export default function AdminDisputes() {
                 <AlertTriangle size={12} />
                 Resolution consequences:
               </p>
-              <p><strong>Release to seller</strong> — buyer&apos;s caution fee is forfeited. Remaining funds go to seller.</p>
-              <p className="mt-1"><strong>Refund to buyer</strong> — seller&apos;s caution fee is forfeited. All funds returned to buyer.</p>
+              <p><strong>Release to seller:</strong> buyer&apos;s caution fee is forfeited. Remaining funds go to seller.</p>
+              <p className="mt-1"><strong>Refund to buyer:</strong> seller&apos;s caution fee is forfeited. All funds returned to buyer.</p>
             </div>
 
             <div className="space-y-2">

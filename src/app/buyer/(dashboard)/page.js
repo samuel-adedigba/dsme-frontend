@@ -1,19 +1,25 @@
 "use client";
 // src/app/buyer/(dashboard)/page.js
-// Shop view for logged-in buyers — same product grid, escrow modal wired to API.
+// Shop view for logged-in buyers  same product grid, escrow modal wired to API.
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import PublicNavbar from "@/components/layout/PublicNavbar";
 import ProductCard from "@/components/ui/ProductCard";
 import { Modal, Button } from "@/components/ui";
 import { products, CATEGORIES } from "@/data/products";
 import { transactionAPI } from "@/lib/api";
+import {
+  DEFAULT_MILESTONE_COUNT,
+  MILESTONE_COUNT_OPTIONS,
+  getMilestonesForCount,
+} from "@/lib/constants";
 import { useApp } from "@/context/AppContext";
 
 export default function BuyerShop() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [escrowModal, setEscrowModal] = useState(null);
+  const [milestoneCount, setMilestoneCount] = useState(DEFAULT_MILESTONE_COUNT);
+  const [milestones, setMilestones] = useState(getMilestonesForCount(DEFAULT_MILESTONE_COUNT));
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const { user } = useApp();
@@ -24,8 +30,47 @@ export default function BuyerShop() {
     [activeCategory]
   );
 
+  const totalPercentage = milestones.reduce((sum, milestone) => {
+    const value = Number(milestone.percentage);
+    return sum + (Number.isFinite(value) ? value : 0);
+  }, 0);
+
+  const handleMilestoneCountChange = (countValue) => {
+    const count = Number(countValue);
+    setMilestoneCount(count);
+    setMilestones(getMilestonesForCount(count));
+  };
+
+  const updateMilestone = (index, field, value) => {
+    setMilestones((prev) =>
+      prev.map((milestone, milestoneIndex) =>
+        milestoneIndex === index
+          ? {
+              ...milestone,
+              [field]: value,
+            }
+          : milestone
+      )
+    );
+  };
+
   const handleInitiate = async () => {
     if (!escrowModal) return;
+    if (totalPercentage !== 100) {
+      setMsg("Milestone percentages must sum to 100%.");
+      return;
+    }
+
+    const hasInvalidMilestone = milestones.some((milestone) => {
+      const value = Number(milestone.percentage);
+      return !milestone.description.trim() || !Number.isFinite(value) || value <= 0;
+    });
+
+    if (hasInvalidMilestone) {
+      setMsg("Each milestone needs a description and a percentage greater than 0.");
+      return;
+    }
+
     setLoading(true);
     setMsg("");
     try {
@@ -35,13 +80,16 @@ export default function BuyerShop() {
         price_kobo: escrowModal.priceKobo,
         buyer_email: user.email,
         caution_rate: 0.05,
-        milestones: [
-          { description: "Materials sourced / initial work", percentage: 30, order_index: 0 },
-          { description: "Final delivery confirmed", percentage: 70, order_index: 1 },
-        ],
+        milestones: milestones.map((milestone, index) => ({
+          description: milestone.description.trim(),
+          percentage: Number(milestone.percentage),
+          order_index: index,
+        })),
       });
       const txId = res.data.data.transaction.id;
       setEscrowModal(null);
+      setMilestoneCount(DEFAULT_MILESTONE_COUNT);
+      setMilestones(getMilestonesForCount(DEFAULT_MILESTONE_COUNT));
       router.push(`/buyer/transactions/${txId}`);
     } catch (err) {
       setMsg(err.response?.data?.message || "Failed to create transaction.");
@@ -104,6 +152,50 @@ export default function BuyerShop() {
             <p className="text-xs text-blue-700 bg-blue-50 rounded-lg p-3">
               Top up your wallet first, then confirm to lock funds. You approve each milestone before the seller is paid.
             </p>
+
+            <div className="border border-gray-100 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-medium text-gray-600">Milestones</label>
+                <select
+                  value={milestoneCount}
+                  onChange={(event) => handleMilestoneCountChange(event.target.value)}
+                  className="input w-28 h-9 text-xs"
+                >
+                  {MILESTONE_COUNT_OPTIONS.map((count) => (
+                    <option key={count} value={count}>
+                      {count} milestone{count > 1 ? "s" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                {milestones.map((milestone, index) => (
+                  <div key={`milestone-${index}`} className="grid grid-cols-12 gap-2 items-center">
+                    <span className="col-span-1 text-xs text-gray-400">{index + 1}</span>
+                    <input
+                      value={milestone.description}
+                      onChange={(event) => updateMilestone(index, "description", event.target.value)}
+                      placeholder={`Milestone ${index + 1} description`}
+                      className="input col-span-7 h-9 text-xs"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={milestone.percentage}
+                      onChange={(event) => updateMilestone(index, "percentage", event.target.value)}
+                      className="input col-span-3 h-9 text-xs"
+                    />
+                    <span className="col-span-1 text-xs text-gray-500">%</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className={`text-xs ${totalPercentage === 100 ? "text-green-600" : "text-red-500"}`}>
+                Total: {totalPercentage}% (must be 100%)
+              </p>
+            </div>
 
             {msg && <p className="text-xs text-red-500">{msg}</p>}
 

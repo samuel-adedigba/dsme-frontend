@@ -57,8 +57,8 @@ export default function AdminTransactions() {
                 ) : transactions.map((tx) => (
                   <tr key={tx.id} className="hover:bg-gray-50 transition">
                     <td className="px-4 py-3 font-medium text-gray-900 max-w-[180px] truncate">{tx.item_name || tx.itemName}</td>
-                    <td className="px-4 py-3 text-gray-600">{tx.seller?.fullName || tx.seller_name || "—"}</td>
-                    <td className="px-4 py-3 text-gray-600">{tx.buyer?.fullName  || tx.buyer_name  || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600">{tx.seller?.fullName || tx.seller_name || ""}</td>
+                    <td className="px-4 py-3 text-gray-600">{tx.buyer?.fullName  || tx.buyer_name  || ""}</td>
                     <td className="px-4 py-3 font-medium">₦{(Number(tx.price_kobo || tx.priceKobo || 0) / 100).toLocaleString()}</td>
                     <td className="px-4 py-3"><StatusBadge status={tx.status} /></td>
                     <td className="px-4 py-3 text-gray-400">{new Date(tx.created_at || tx.createdAt).toLocaleDateString()}</td>

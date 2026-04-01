@@ -1,5 +1,5 @@
 "use client";
-// src/app/page.js — Public storefront landing page
+// src/app/page.js  Public storefront landing page
 
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -10,15 +10,18 @@ import ProductCard from "@/components/ui/ProductCard";
 import { Modal, Button, Input, Select } from "@/components/ui";
 import { products, CATEGORIES } from "@/data/products";
 import { transactionAPI } from "@/lib/api";
+import {
+  DEFAULT_MILESTONE_COUNT,
+  MILESTONE_COUNT_OPTIONS,
+  getMilestonesForCount,
+} from "@/lib/constants";
 import { useApp } from "@/context/AppContext";
 
 function StoreFront() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [escrowModal, setEscrowModal] = useState(null); // selected product
-  const [milestones, setMilestones] = useState([
-    { description: "Materials sourced / initial work", percentage: 30, order_index: 0 },
-    { description: "Final delivery confirmed", percentage: 70, order_index: 1 },
-  ]);
+  const [milestoneCount, setMilestoneCount] = useState(DEFAULT_MILESTONE_COUNT);
+  const [milestones, setMilestones] = useState(getMilestonesForCount(DEFAULT_MILESTONE_COUNT));
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
   const router = useRouter();
@@ -39,10 +42,49 @@ function StoreFront() {
     return list;
   }, [activeCategory, searchQuery]);
 
+  const totalPercentage = milestones.reduce((sum, milestone) => {
+    const value = Number(milestone.percentage);
+    return sum + (Number.isFinite(value) ? value : 0);
+  }, 0);
+
+  const handleMilestoneCountChange = (countValue) => {
+    const count = Number(countValue);
+    setMilestoneCount(count);
+    setMilestones(getMilestonesForCount(count));
+  };
+
+  const updateMilestone = (index, field, value) => {
+    setMilestones((prev) =>
+      prev.map((milestone, milestoneIndex) =>
+        milestoneIndex === index
+          ? {
+              ...milestone,
+              [field]: value,
+            }
+          : milestone
+      )
+    );
+  };
+
   const handleBuyEscrow = (product) => setEscrowModal(product);
 
   const handleInitiateTransaction = async () => {
     if (!escrowModal) return;
+    if (totalPercentage !== 100) {
+      setToast("Milestone percentages must sum to 100%.");
+      return;
+    }
+
+    const hasInvalidMilestone = milestones.some((milestone) => {
+      const value = Number(milestone.percentage);
+      return !milestone.description.trim() || !Number.isFinite(value) || value <= 0;
+    });
+
+    if (hasInvalidMilestone) {
+      setToast("Each milestone needs a description and a percentage greater than 0.");
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -51,11 +93,17 @@ function StoreFront() {
         price_kobo: escrowModal.priceKobo,
         buyer_email: user.email,
         caution_rate: 0.05,
-        milestones,
+        milestones: milestones.map((milestone, index) => ({
+          description: milestone.description.trim(),
+          percentage: Number(milestone.percentage),
+          order_index: index,
+        })),
       };
       const res = await transactionAPI.create(payload);
       setToast("Transaction created! Check your dashboard.");
       setEscrowModal(null);
+      setMilestoneCount(DEFAULT_MILESTONE_COUNT);
+      setMilestones(getMilestonesForCount(DEFAULT_MILESTONE_COUNT));
       setTimeout(() => router.push(`/buyer/transactions/${res.data.data.transaction.id}`), 1000);
     } catch (err) {
       setToast(err.response?.data?.message || "Failed to create transaction.");
@@ -76,7 +124,7 @@ function StoreFront() {
           </h1>
           <p className="text-orange-100 text-base mb-6 max-w-2xl mx-auto">
             Every purchase backed by dual-staking escrow. Your money is protected until
-            you confirm delivery — and sellers commit too.
+            you confirm delivery  and sellers commit too.
           </p>
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             {[
@@ -179,6 +227,50 @@ function StoreFront() {
             <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
               <p className="font-medium mb-1">How this works:</p>
               <p>Your funds will be locked in your DSME wallet. The seller completes work in milestones. You approve each stage to release payment. Your caution fee is returned on completion.</p>
+            </div>
+
+            <div className="border border-gray-100 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <Select
+                  label="Milestones"
+                  value={milestoneCount}
+                  onChange={(event) => handleMilestoneCountChange(event.target.value)}
+                  className="h-9 text-xs"
+                >
+                  {MILESTONE_COUNT_OPTIONS.map((count) => (
+                    <option key={count} value={count}>
+                      {count} milestone{count > 1 ? "s" : ""}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                {milestones.map((milestone, index) => (
+                  <div key={`milestone-${index}`} className="grid grid-cols-12 gap-2 items-center">
+                    <span className="col-span-1 text-xs text-gray-400">{index + 1}</span>
+                    <Input
+                      value={milestone.description}
+                      onChange={(event) => updateMilestone(index, "description", event.target.value)}
+                      placeholder={`Milestone ${index + 1} description`}
+                      className="col-span-7 h-9 text-xs"
+                    />
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={milestone.percentage}
+                      onChange={(event) => updateMilestone(index, "percentage", event.target.value)}
+                      className="col-span-3 h-9 text-xs"
+                    />
+                    <span className="col-span-1 text-xs text-gray-500">%</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className={`text-xs ${totalPercentage === 100 ? "text-green-600" : "text-red-500"}`}>
+                Total: {totalPercentage}% (must be 100%)
+              </p>
             </div>
 
             <div className="flex gap-2">

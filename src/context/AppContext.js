@@ -5,8 +5,10 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { authAPI } from "@/lib/api";
+import { Toast } from "@/components/ui/index";
 
 const AppContext = createContext(null);
+const TOAST_EVENT = "dsme:toast";
 
 export function AppProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -14,6 +16,7 @@ export function AppProvider({ children }) {
   const [cart, setCart] = useState([]);       // [{ product, qty }]
   const [wishlist, setWishlist] = useState([]); // [product]
   const [hydrated, setHydrated] = useState(false);
+  const [toast, setToast] = useState({ message: "", type: "info" });
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -41,6 +44,26 @@ export function AppProvider({ children }) {
     if (!hydrated) return;
     localStorage.setItem("dsme_wishlist", JSON.stringify(wishlist));
   }, [wishlist, hydrated]);
+
+  useEffect(() => {
+    const handleToastEvent = (event) => {
+      const message = event?.detail?.message;
+      const type = event?.detail?.type || "info";
+      if (!message) return;
+      setToast({ message, type });
+    };
+
+    window.addEventListener(TOAST_EVENT, handleToastEvent);
+    return () => window.removeEventListener(TOAST_EVENT, handleToastEvent);
+  }, []);
+
+  useEffect(() => {
+    if (!toast.message) return;
+    const timer = setTimeout(() => {
+      setToast({ message: "", type: "info" });
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   // ── AUTH ────────────────────────────────────────────────────────────────────
   const login = useCallback((userData, jwtToken) => {
@@ -103,16 +126,23 @@ export function AppProvider({ children }) {
   );
 
   return (
-    <AppContext.Provider
-      value={{
-        user, token, hydrated,
-        login, logout,
-        cart, addToCart, removeFromCart, clearCart, cartCount, cartTotal,
-        wishlist, toggleWishlist, isWishlisted, moveToCart,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+    <>
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: "", type: "info" })}
+      />
+      <AppContext.Provider
+        value={{
+          user, token, hydrated,
+          login, logout,
+          cart, addToCart, removeFromCart, clearCart, cartCount, cartTotal,
+          wishlist, toggleWishlist, isWishlisted, moveToCart,
+        }}
+      >
+        {children}
+      </AppContext.Provider>
+    </>
   );
 }
 

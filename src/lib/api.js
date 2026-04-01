@@ -1,9 +1,20 @@
 // src/lib/api.js
 // Central Axios instance. Every backend call goes through this file.
-// Base URL reads from NEXT_PUBLIC_API_URL env var — defaults to localhost:5000.
+// Base URL reads from NEXT_PUBLIC_API_URL env var  defaults to localhost:5000.
 // JWT is attached automatically from localStorage on every request.
 
 import axios from "axios";
+
+const TOAST_EVENT = "dsme:toast";
+
+function emitToast(message, type = "info") {
+  if (typeof window === "undefined" || !message) return;
+  window.dispatchEvent(
+    new CustomEvent(TOAST_EVENT, {
+      detail: { message, type },
+    })
+  );
+}
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1",
@@ -20,10 +31,23 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401 — clear auth and redirect to login
+// On 401  clear auth and redirect to login
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    const method = res?.config?.method?.toLowerCase();
+    if (method === "post") {
+      const message = res?.data?.message;
+      if (message) emitToast(message, "success");
+    }
+    return res;
+  },
   (err) => {
+    const method = err?.config?.method?.toLowerCase();
+    if (method === "post") {
+      const message = err?.response?.data?.message;
+      if (message) emitToast(message, "error");
+    }
+
     if (err.response?.status === 401 && typeof window !== "undefined") {
       localStorage.removeItem("dsme_token");
       localStorage.removeItem("dsme_user");

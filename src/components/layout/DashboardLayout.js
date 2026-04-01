@@ -90,7 +90,7 @@ export default function DashboardLayout({ children, role }) {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar — desktop */}
+      {/* Sidebar  desktop */}
       <aside className="hidden lg:flex flex-col w-60 bg-white border-r border-gray-100 fixed h-full z-30">
         <div className="h-16 flex items-center gap-2 px-4 border-b border-gray-100">
           <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center">
@@ -211,7 +211,7 @@ export default function DashboardLayout({ children, role }) {
                       <div>
                         <p className="text-xs text-gray-400">Available balance</p>
                         <p className="text-sm text-gray-900 font-semibold">
-                          {availableBalanceKobo === null ? "—" : `₦${(availableBalanceKobo / 100).toLocaleString()}`}
+                          {availableBalanceKobo === null ? "" : `₦${(availableBalanceKobo / 100).toLocaleString()}`}
                         </p>
                       </div>
                     </div>

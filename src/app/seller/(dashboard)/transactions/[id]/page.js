@@ -128,7 +128,7 @@ export default function SellerTransactionDetail() {
           </p>
           <div className={`rounded-lg p-3 mb-3 text-sm ${hasEnough ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
             Wallet balance: <strong>₦{(available / 100).toLocaleString()}</strong>
-            {!hasEnough && ` — need ₦${((stakeAmt - available) / 100).toLocaleString()} more`}
+            {!hasEnough && `  need ₦${((stakeAmt - available) / 100).toLocaleString()} more`}
           </div>
           <Button className="w-full" loading={staking} disabled={!hasEnough} onClick={handleStake}>
             {hasEnough ? `Stake ₦${(stakeAmt / 100).toLocaleString()}` : "Top up wallet first"}
@@ -166,7 +166,7 @@ export default function SellerTransactionDetail() {
                     {hasProof && (
                       <div className="mt-2 flex items-center gap-1 text-xs text-purple-600">
                         <Upload size={11} />
-                        Proof submitted — awaiting buyer approval
+                        Proof submitted  awaiting buyer approval
                       </div>
                     )}
                   </div>

@@ -1,6 +1,6 @@
 "use client";
 // src/app/buyer/(dashboard)/transactions/[id]/page.js
-// The most important screen — shows FSM state, milestones, stake button,
+// The most important screen  shows FSM state, milestones, stake button,
 // approve/dispute actions. This is where the DSME flow plays out for the buyer.
 
 import { useState, useEffect, useCallback } from "react";
@@ -116,7 +116,7 @@ export default function BuyerTransactionDetail() {
         <div className="flex-1 min-w-0">
           <h1 className="font-bold text-gray-900 truncate">{tx.item_name || tx.itemName}</h1>
           <p className="text-xs text-gray-500">
-            Seller: {tx.seller_name || tx.seller?.fullName} · ID: {tx.id.slice(0, 8)}...
+            Seller`s name: {tx.seller_name || tx.seller?.fullName}
           </p>
         </div>
         <StatusBadge status={tx.status} />
@@ -149,7 +149,7 @@ export default function BuyerTransactionDetail() {
         </div>
       </div>
 
-      {/* STAKE ACTION — shown when awaiting buyer */}
+      {/* STAKE ACTION  shown when awaiting buyer */}
       {isAwaitingBuyerStake && (
         <div className="card p-5 border-orange-200">
           <h3 className="font-semibold text-sm text-orange-800 mb-3 flex items-center gap-2">
@@ -249,7 +249,7 @@ export default function BuyerTransactionDetail() {
                   )}
                 </div>
 
-                {/* Buyer actions — approve or dispute */}
+                {/* Buyer actions  approve or dispute */}
                 {needsAction && (
                   <div className="flex gap-2 mt-3 pt-3 border-t border-orange-200">
                     <Button
