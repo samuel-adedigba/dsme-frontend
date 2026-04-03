@@ -4,15 +4,17 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowRight, Package, Wallet, AlertTriangle, CheckCircle } from "lucide-react";
 import { transactionAPI, walletAPI } from "@/lib/api";
-import { StatusBadge, Spinner } from "@/components/ui";
+import { StatusBadge, Spinner, VerificationBanner, BvnVerificationModal } from "@/components/ui";
 import { products } from "@/data/products";
 import { useApp } from "@/context/AppContext";
 
 export default function SellerOverview() {
-  const { user } = useApp();
+  const { user, refreshProfile } = useApp();
   const [transactions, setTransactions] = useState([]);
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showBanner, setShowBanner] = useState(true);
 
   useEffect(() => {
     Promise.all([transactionAPI.getAll(), walletAPI.getWallet()])
@@ -22,6 +24,12 @@ export default function SellerOverview() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const handleVerificationSuccess = async () => {
+    await refreshProfile();
+    setShowVerificationModal(false);
+    setShowBanner(false);
+  };
 
   if (loading) return <div className="flex justify-center py-20"><Spinner size={32} /></div>;
 
@@ -40,6 +48,14 @@ export default function SellerOverview() {
 
   return (
     <div className="space-y-6">
+      {/* Verification banner for unverified users */}
+      {!user?.bvnVerified && showBanner && (
+        <VerificationBanner
+          onVerify={() => setShowVerificationModal(true)}
+          onDismiss={() => setShowBanner(false)}
+        />
+      )}
+
       <div>
         <h1 className="text-xl font-bold text-gray-900">Seller Dashboard</h1>
         <p className="text-sm text-gray-500 mt-0.5">Welcome back, {user?.fullName || user?.full_name}</p>
@@ -131,6 +147,13 @@ export default function SellerOverview() {
           </div>
         )}
       </div>
+
+      {/* BVN Verification Modal */}
+      <BvnVerificationModal
+        open={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </div>
   );
 }

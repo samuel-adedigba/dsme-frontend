@@ -106,3 +106,23 @@ export const adminAPI = {
   getDisputes: () => api.get("/admin/disputes"),
   resolveDispute: (data) => api.post("/admin/disputes/resolve", data),
 };
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+export const notificationsAPI = {
+  // User notifications
+  getNotifications: (params) => api.get("/user/notifications", { params }),
+  getUnreadCount: () => api.get("/user/notifications/unread-count"),
+  getPreferences: () => api.get("/user/notifications/preferences"),
+  updatePreferences: (data) => api.patch("/user/notifications/preferences", data),
+  markAsRead: (id) => api.patch(`/user/notifications/${id}/read`),
+  markAllAsRead: () => api.patch("/user/notifications/mark-all-read"),
+  deleteNotification: (id) => api.delete(`/user/notifications/${id}`),
+  
+  // Admin notifications
+  getSystemNotifications: (params) => api.get("/notifications", { params }),
+  getNotificationStats: () => api.get("/notifications/stats"),
+  getAdminUnreadCount: () => api.get("/notifications/unread-count"),
+  markAdminAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markMultipleAsRead: (ids) => api.patch("/notifications/mark-read", { notification_ids: ids }),
+  deleteAdminNotification: (id) => api.delete(`/notifications/${id}`),
+};

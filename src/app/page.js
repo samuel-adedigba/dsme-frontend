@@ -7,7 +7,7 @@ import { Shield, Zap, Lock, CheckCircle2, Scale, Search } from "lucide-react";
 import { AppProvider } from "@/context/AppContext";
 import PublicNavbar from "@/components/layout/PublicNavbar";
 import ProductCard from "@/components/ui/ProductCard";
-import { Modal, Button, Input, Select } from "@/components/ui";
+import { Modal, Button, Input, Select, BvnVerificationModal, VerificationBanner } from "@/components/ui";
 import { products, CATEGORIES } from "@/data/products";
 import { transactionAPI } from "@/lib/api";
 import {
@@ -24,8 +24,9 @@ function StoreFront() {
   const [milestones, setMilestones] = useState(getMilestonesForCount(DEFAULT_MILESTONE_COUNT));
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const router = useRouter();
-  const { user, resolveSellerForProduct } = useApp();
+  const { user, resolveSellerForProduct, refreshProfile } = useApp();
 
   const searchParams = useSearchParams();
   const searchQuery = searchParams?.get("search") || "";
@@ -70,6 +71,19 @@ function StoreFront() {
 
   const handleInitiateTransaction = async () => {
     if (!escrowModal) return;
+    
+    // Check if user is logged in
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    
+    // Check BVN verification before allowing transaction
+    if (!user?.bvnVerified) {
+      setShowVerificationModal(true);
+      return;
+    }
+    
     const resolvedSeller = resolveSellerForProduct(escrowModal);
     if (!resolvedSeller.id) {
       setToast("This seller is not linked yet. Please try another product.");
@@ -115,6 +129,11 @@ function StoreFront() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerificationSuccess = async () => {
+    await refreshProfile();
+    setShowVerificationModal(false);
   };
 
   return (
@@ -290,6 +309,13 @@ function StoreFront() {
           </div>
         )}
       </Modal>
+
+      {/* BVN Verification Modal */}
+      <BvnVerificationModal
+        open={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </>
   );
 }

@@ -5,6 +5,13 @@
 import clsx from "clsx";
 import { Loader2, X } from "lucide-react";
 
+// Export new components
+export { BvnVerificationModal } from "./BvnVerificationModal";
+export { VerificationBanner } from "./VerificationBanner";
+export { NotificationDropdown } from "./NotificationDropdown";
+export { NotificationItem } from "./NotificationItem";
+export { NotificationPreferences } from "./NotificationPreferences";
+
 // ── BUTTON ────────────────────────────────────────────────────────────────────
 export function Button({ children, variant = "primary", size = "md", loading, className, ...props }) {
   const base = "inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed";

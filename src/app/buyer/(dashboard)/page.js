@@ -5,7 +5,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import ProductCard from "@/components/ui/ProductCard";
-import { Modal, Button } from "@/components/ui";
+import { Modal, Button, BvnVerificationModal, VerificationBanner } from "@/components/ui";
 import { products, CATEGORIES } from "@/data/products";
 import { transactionAPI } from "@/lib/api";
 import {
@@ -22,7 +22,9 @@ export default function BuyerShop() {
   const [milestones, setMilestones] = useState(getMilestonesForCount(DEFAULT_MILESTONE_COUNT));
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
-  const { user, resolveSellerForProduct } = useApp();
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showBanner, setShowBanner] = useState(true);
+  const { user, resolveSellerForProduct, refreshProfile } = useApp();
   const router = useRouter();
 
   const filtered = useMemo(() =>
@@ -56,6 +58,13 @@ export default function BuyerShop() {
 
   const handleInitiate = async () => {
     if (!escrowModal) return;
+    
+    // Check BVN verification before allowing transaction
+    if (!user?.bvnVerified) {
+      setShowVerificationModal(true);
+      return;
+    }
+    
     const resolvedSeller = resolveSellerForProduct(escrowModal);
     if (!resolvedSeller.id) {
       setMsg("This seller is not linked yet. Please try another product.");
@@ -103,8 +112,25 @@ export default function BuyerShop() {
     }
   };
 
+  const handleVerificationSuccess = async () => {
+    await refreshProfile();
+    setShowVerificationModal(false);
+    setShowBanner(false);
+  };
+
   return (
     <>
+      {/* Verification banner for unverified users */}
+      {!user?.bvnVerified && showBanner && (
+        <div className="mb-6">
+          <VerificationBanner
+            compact={true}
+            onVerify={() => setShowVerificationModal(true)}
+            onDismiss={() => setShowBanner(false)}
+          />
+        </div>
+      )}
+
       {/* Category strip reused from public navbar */}
       <div className="mb-6">
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -218,6 +244,13 @@ export default function BuyerShop() {
           </div>
         )}
       </Modal>
+
+      {/* BVN Verification Modal */}
+      <BvnVerificationModal
+        open={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </>
   );
 }

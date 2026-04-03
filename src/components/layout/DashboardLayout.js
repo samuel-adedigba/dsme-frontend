@@ -4,10 +4,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield, LogOut, ShoppingCart, Heart, Wallet, ListOrdered, BarChart3, AlertTriangle, Menu, X, Store, ArrowLeft, ChevronDown, LayoutDashboard } from "lucide-react";
+import { Shield, LogOut, ShoppingCart, Heart, Wallet, ListOrdered, BarChart3, AlertTriangle, Menu, X, Store, ArrowLeft, ChevronDown, LayoutDashboard, Settings, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { walletAPI } from "@/lib/api";
+import { NotificationDropdown } from "@/components/ui";
 import clsx from "clsx";
 
 const BUYER_NAV = [
@@ -16,18 +17,24 @@ const BUYER_NAV = [
   { label: "Cart", href: "/buyer/cart", icon: <ShoppingCart size={16} /> },
   { label: "Wishlist", href: "/buyer/wishlist", icon: <Heart size={16} /> },
   { label: "Wallet", href: "/buyer/wallet", icon: <Wallet size={16} /> },
+  { label: "Notifications", href: "/notifications", icon: <Bell size={16} /> },
+  { label: "Settings", href: "/settings", icon: <Settings size={16} /> },
 ];
 
 const SELLER_NAV = [
   { label: "Overview", href: "/seller", icon: <BarChart3 size={16} /> },
   { label: "My Transactions", href: "/seller/transactions", icon: <ListOrdered size={16} /> },
   { label: "Wallet", href: "/seller/wallet", icon: <Wallet size={16} /> },
+  { label: "Notifications", href: "/notifications", icon: <Bell size={16} /> },
+  { label: "Settings", href: "/settings", icon: <Settings size={16} /> },
 ];
 
 const ADMIN_NAV = [
   { label: "Stats", href: "/admin", icon: <BarChart3 size={16} /> },
   { label: "Transactions", href: "/admin/transactions", icon: <ListOrdered size={16} /> },
   { label: "Disputes", href: "/admin/disputes", icon: <AlertTriangle size={16} /> },
+  { label: "Notifications", href: "/notifications", icon: <Bell size={16} /> },
+  { label: "Settings", href: "/settings", icon: <Settings size={16} /> },
 ];
 
 export default function DashboardLayout({ children, role }) {
@@ -152,6 +159,9 @@ export default function DashboardLayout({ children, role }) {
           </button>
 
           <div className="flex items-center gap-2 ml-auto">
+            {/* Notification Dropdown */}
+            <NotificationDropdown compact={true} />
+
             {role === "buyer" && (
               <>
                 <Link href="/buyer/wishlist" className="relative p-2 hover:bg-gray-100 rounded-full">

@@ -4,7 +4,7 @@
 // Wrap the app in AppProvider to access useApp() hook anywhere.
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { authAPI, publicAPI } from "@/lib/api";
+import { authAPI, publicAPI, notificationsAPI } from "@/lib/api";
 import { Toast } from "@/components/ui/index";
 
 const AppContext = createContext(null);
@@ -22,6 +22,27 @@ export function AppProvider({ children }) {
     byEmail: {},
     loading: false,
     loaded: false,
+  });
+  
+  // Notifications state
+  const [notifications, setNotifications] = useState({
+    list: [],
+    loading: false,
+    error: null,
+    page: 1,
+    limit: 20,
+    hasMore: true,
+  });
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    emailEnabled: true,
+    emailTransactions: true,
+    emailPayments: true,
+    emailDisputes: true,
+    inAppEnabled: true,
+    inAppTransactions: true,
+    inAppPayments: true,
+    inAppDisputes: true,
   });
 
   const indexSellersByEmail = useCallback((sellers) => {
@@ -68,6 +89,7 @@ export function AppProvider({ children }) {
     const storedUser = localStorage.getItem("dsme_user");
     const storedCart = localStorage.getItem("dsme_cart");
     const storedWishlist = localStorage.getItem("dsme_wishlist");
+    const storedNotificationPrefs = localStorage.getItem("dsme_notification_preferences");
 
     if (storedToken && storedUser) {
       setToken(storedToken);
@@ -75,6 +97,13 @@ export function AppProvider({ children }) {
     }
     if (storedCart) setCart(JSON.parse(storedCart));
     if (storedWishlist) setWishlist(JSON.parse(storedWishlist));
+    if (storedNotificationPrefs) {
+      try {
+        setNotificationPreferences(JSON.parse(storedNotificationPrefs));
+      } catch (e) {
+        console.warn("Failed to parse notification preferences from localStorage");
+      }
+    }
     setHydrated(true);
   }, []);
 
@@ -88,6 +117,11 @@ export function AppProvider({ children }) {
     if (!hydrated) return;
     localStorage.setItem("dsme_wishlist", JSON.stringify(wishlist));
   }, [wishlist, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem("dsme_notification_preferences", JSON.stringify(notificationPreferences));
+  }, [notificationPreferences, hydrated]);
 
   useEffect(() => {
     const handleToastEvent = (event) => {
@@ -113,6 +147,32 @@ export function AppProvider({ children }) {
     refreshSellers();
   }, [refreshSellers]);
 
+  // Fetch unread count periodically for logged-in users
+  useEffect(() => {
+    if (!token || !hydrated) return;
+    
+    const fetchUnreadCount = async () => {
+      try {
+        // Use different API based on user role
+        const isAdmin = user?.role === 'admin';
+        const api = isAdmin ? notificationsAPI.getAdminUnreadCount : notificationsAPI.getUnreadCount;
+        
+        const res = await api();
+        // Handle both direct count and nested count formats
+        const unreadCount = res.data.data?.unread_count || res.data.data?.unreadCount || 0;
+        setUnreadCount(unreadCount);
+      } catch (err) {
+        console.error("Failed to fetch unread count:", err);
+      }
+    };
+
+    fetchUnreadCount();
+    
+    // Poll every 30 seconds for new notifications
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [token, hydrated, user?.role]);
+
   // ── AUTH ────────────────────────────────────────────────────────────────────
   const login = useCallback((userData, jwtToken) => {
     setUser(userData);
@@ -129,6 +189,18 @@ export function AppProvider({ children }) {
     localStorage.removeItem("dsme_user");
     window.location.href = "/";
   }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await authAPI.getProfile();
+      const userData = res.data.data.user;
+      setUser(userData);
+      localStorage.setItem("dsme_user", JSON.stringify(userData));
+    } catch (err) {
+      console.error("Failed to refresh profile:", err);
+    }
+  }, [token]);
 
   // ── CART ─────────────────────────────────────────────────────────────────────
   const addToCart = useCallback((product) => {
@@ -173,6 +245,155 @@ export function AppProvider({ children }) {
     [addToCart]
   );
 
+  // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+  const fetchNotifications = useCallback(async (params = {}) => {
+    if (!token) return;
+    
+    setNotifications((prev) => ({ ...prev, loading: true, error: null }));
+    
+    try {
+      // Use different API based on user role
+      const isAdmin = user?.role === 'admin';
+      const api = isAdmin ? notificationsAPI.getSystemNotifications : notificationsAPI.getNotifications;
+      
+      const res = await api({
+        page: params.page || notifications.page,
+        limit: params.limit || notifications.limit,
+        category: params.category,
+        isRead: params.isRead,
+        type: params.type, // For admin notifications
+        severity: params.severity, // For admin notifications
+        ...params,
+      });
+      
+      const newNotifications = res.data.data?.notifications || res.data.data || [];
+      const hasMore = newNotifications.length === notifications.limit;
+      
+      setNotifications((prev) => ({
+        ...prev,
+        list: params.page === 1 ? newNotifications : [...prev.list, ...newNotifications],
+        loading: false,
+        hasMore,
+        page: params.page || prev.page,
+      }));
+    } catch (err) {
+      setNotifications((prev) => ({
+        ...prev,
+        loading: false,
+        error: err.response?.data?.message || "Failed to fetch notifications",
+      }));
+    }
+  }, [token, notifications.page, notifications.limit, user?.role]);
+
+  const markNotificationAsRead = useCallback(async (id) => {
+    if (!token) return;
+    
+    try {
+      // Use different API based on user role
+      const isAdmin = user?.role === 'admin';
+      const api = isAdmin ? notificationsAPI.markAdminAsRead : notificationsAPI.markAsRead;
+      
+      await api(id);
+      
+      setNotifications((prev) => ({
+        ...prev,
+        list: prev.list.map((notif) =>
+          notif.id === id ? { ...notif, isRead: true } : notif
+        ),
+      }));
+      
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
+  }, [token, user?.role]);
+
+  const markAllNotificationsAsRead = useCallback(async () => {
+    if (!token) return;
+    
+    try {
+      // Use different API based on user role
+      const isAdmin = user?.role === 'admin';
+      const api = isAdmin ? notificationsAPI.markMultipleAsRead : notificationsAPI.markAllAsRead;
+      
+      if (isAdmin) {
+        // For admin, we need to pass notification IDs
+        const unreadIds = notifications.list.filter(n => !n.isRead).map(n => n.id);
+        if (unreadIds.length > 0) {
+          await api(unreadIds);
+        }
+      } else {
+        await api();
+      }
+      
+      setNotifications((prev) => ({
+        ...prev,
+        list: prev.list.map((notif) => ({ ...notif, isRead: true })),
+      }));
+      
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all notifications as read:", err);
+    }
+  }, [token, notifications.list, user?.role]);
+
+  const deleteNotification = useCallback(async (id) => {
+    if (!token) return;
+    
+    try {
+      // Use different API based on user role
+      const isAdmin = user?.role === 'admin';
+      const api = isAdmin ? notificationsAPI.deleteAdminNotification : notificationsAPI.deleteNotification;
+      
+      await api(id);
+      
+      setNotifications((prev) => {
+        const notificationToDelete = prev.list.find((notif) => notif.id === id);
+        const wasUnread = notificationToDelete?.isRead === false;
+        
+        return {
+          ...prev,
+          list: prev.list.filter((notif) => notif.id !== id),
+        };
+      });
+      
+      // Update unread count if deleted notification was unread
+      const notificationToDelete = notifications.list.find((notif) => notif.id === id);
+      if (notificationToDelete?.isRead === false) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
+    }
+  }, [token, notifications.list, user?.role]);
+
+  const updateNotificationPreferences = useCallback(async (preferences) => {
+    if (!token) return;
+    
+    try {
+      await notificationsAPI.updatePreferences(preferences);
+      setNotificationPreferences(preferences);
+    } catch (err) {
+      console.error("Failed to update notification preferences:", err);
+      throw err;
+    }
+  }, [token]);
+
+  const refreshNotifications = useCallback(async () => {
+    await fetchNotifications({ page: 1 });
+    
+    // Also refresh unread count
+    try {
+      const isAdmin = user?.role === 'admin';
+      const api = isAdmin ? notificationsAPI.getAdminUnreadCount : notificationsAPI.getUnreadCount;
+      const res = await api();
+      const unreadCount = res.data.data?.unread_count || res.data.data?.unreadCount || 0;
+      setUnreadCount(unreadCount);
+    } catch (err) {
+      console.error("Failed to refresh unread count:", err);
+    }
+  }, [fetchNotifications, user?.role]);
+
   return (
     <>
       <Toast
@@ -183,7 +404,7 @@ export function AppProvider({ children }) {
       <AppContext.Provider
         value={{
           user, token, hydrated,
-          login, logout,
+          login, logout, refreshProfile,
           cart, addToCart, removeFromCart, clearCart, cartCount, cartTotal,
           wishlist, toggleWishlist, isWishlisted, moveToCart,
           sellers: sellerDirectory.list,
@@ -191,6 +412,20 @@ export function AppProvider({ children }) {
           sellersLoaded: sellerDirectory.loaded,
           refreshSellers,
           resolveSellerForProduct,
+          // Notifications
+          notifications: notifications.list,
+          notificationsLoading: notifications.loading,
+          notificationsError: notifications.error,
+          notificationsHasMore: notifications.hasMore,
+          notificationsPage: notifications.page,
+          unreadCount,
+          notificationPreferences,
+          fetchNotifications,
+          markNotificationAsRead,
+          markAllNotificationsAsRead,
+          deleteNotification,
+          updateNotificationPreferences,
+          refreshNotifications,
         }}
       >
         {children}

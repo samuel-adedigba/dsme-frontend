@@ -4,7 +4,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Wallet, ArrowDownLeft, ArrowUpRight, Copy, RefreshCw, CreditCard } from "lucide-react";
 import { walletAPI } from "@/lib/api";
-import { Button, Spinner, EmptyState, Modal, Input } from "@/components/ui";
+import { Button, Spinner, EmptyState, Modal, Input, BvnVerificationModal, VerificationBanner } from "@/components/ui";
+import { useApp } from "@/context/AppContext";
 
 const LEDGER_COLORS = {
   DEPOSIT:               "bg-green-100 text-green-700",
@@ -25,6 +26,10 @@ export default function WalletPage() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [msg, setMsg] = useState({ text: "", type: "" });
   const [copied, setCopied] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showBanner, setShowBanner] = useState(true);
+  
+  const { user, refreshProfile } = useApp();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,6 +49,12 @@ export default function WalletPage() {
   };
 
   const handleWithdraw = async () => {
+    // Check BVN verification before allowing withdrawal
+    if (!user?.bvnVerified) {
+      setShowVerificationModal(true);
+      return;
+    }
+    
     const kobo = Math.round(parseFloat(withdrawAmount) * 100);
     if (!kobo || kobo < 10000) { setMsg({ text: "Minimum withdrawal is ₦100.", type: "error" }); return; }
     setWithdrawing(true);
@@ -61,6 +72,12 @@ export default function WalletPage() {
     }
   };
 
+  const handleVerificationSuccess = async () => {
+    await refreshProfile();
+    setShowVerificationModal(false);
+    setShowBanner(false);
+  };
+
   if (loading) return <div className="flex justify-center py-20"><Spinner size={32} /></div>;
   if (!wallet) return <EmptyState icon={<CreditCard size={44} className="text-gray-400" />} title="Wallet not found" description="Contact support if this persists." />;
 
@@ -73,6 +90,14 @@ export default function WalletPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <h1 className="text-xl font-bold text-gray-900">My Wallet</h1>
+
+      {/* Verification banner for unverified users */}
+      {!user?.bvnVerified && showBanner && (
+        <VerificationBanner
+          onVerify={() => setShowVerificationModal(true)}
+          onDismiss={() => setShowBanner(false)}
+        />
+      )}
 
       {/* Balance cards */}
       <div className="grid grid-cols-2 gap-4">
@@ -110,7 +135,16 @@ export default function WalletPage() {
             <p className="text-xs text-gray-400">Any amount transferred here will reflect in your available balance within seconds.</p>
           </div>
         ) : (
-          <p className="text-sm text-gray-400">DVA not generated yet. Please verify your BVN in settings.</p>
+          <div>
+            <p className="text-sm text-gray-400">DVA not generated yet. Please verify your BVN in settings.</p>
+            {!user?.bvnVerified && (
+              <div className="mt-3 p-3 bg-orange-50 rounded-lg">
+                <p className="text-xs text-orange-700">
+                  <strong>BVN verification required</strong> to generate your virtual account number for deposits.
+                </p>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -121,9 +155,9 @@ export default function WalletPage() {
           <p className="text-xs text-gray-500 mt-0.5">Send available balance to your registered account</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setWithdrawModal(true)}
-          disabled={available < 10000}>
+          disabled={available < 10000 || !user?.bvnVerified}>
           <ArrowUpRight size={14} />
-          Withdraw
+          {!user?.bvnVerified ? "Verify First" : "Withdraw"}
         </Button>
       </div>
 
@@ -189,6 +223,13 @@ export default function WalletPage() {
           </div>
         </div>
       </Modal>
+
+      {/* BVN Verification Modal */}
+      <BvnVerificationModal
+        open={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </div>
   );
 }
